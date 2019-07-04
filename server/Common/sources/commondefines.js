@@ -1,40 +1,17 @@
 /*
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System Limited 2010-2018. All rights reserved
  *
- * This program is a free software product. You can redistribute it and/or
- * modify it under the terms of the GNU Affero General Public License (AGPL)
- * version 3 as published by the Free Software Foundation. In accordance with
- * Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
- * that Ascensio System SIA expressly excludes the warranty of non-infringement
- * of any third-party rights.
+ * http://www.teamlab.com
  *
- * This program is distributed WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
- * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
- *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
- * street, Riga, Latvia, EU, LV-1050.
- *
- * The  interactive user interfaces in modified source and object code versions
- * of the Program must display Appropriate Legal Notices, as required under
- * Section 5 of the GNU AGPL version 3.
- *
- * Pursuant to Section 7(b) of the License you must retain the original Product
- * logo when distributing the program. Pursuant to Section 7(e) we decline to
- * grant you any rights under trademark law for use of our trademarks.
- *
- * All the Product's GUI elements, including illustrations and icon sets, as
- * well as technical writing content are licensed under the terms of the
- * Creative Commons Attribution-ShareAlike 4.0 International. See the License
- * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
- *
+ * Version: 5.2.4 (build:94)
  */
+
 
 'use strict';
 
 const constants = require('./constants');
 
-function InputCommand(data) {
+function InputCommand(data, jwtOpen) {
   if (data) {
     this['c'] = data['c'];
     this['id'] = data['id'];
@@ -85,33 +62,31 @@ function InputCommand(data) {
     this['nobase64'] = data['nobase64'];
     this['forgotten'] = data['forgotten'];
     this['isbuilder'] = data['isbuilder'];
-    this['status_info_in'] = data['status_info_in'];
-    this['attempt'] = data['attempt'];
-    this['withAuthorization'] = data['withAuthorization'];
+    if(!!jwtOpen){
+      this['accesstoken'] = jwtOpen;
+    } else {
+      this['accesstoken'] = data['accesstoken'];
+    }
   } else {
     this['c'] = undefined;//string command
     this['id'] = undefined;//string document id
     this['userid'] = undefined;//string
     this['jwt'] = undefined;//string validate
     this['data'] = undefined;//string
-    //to open
     this['editorid'] = undefined;//int
     this['format'] = undefined;//string extention
     this['url'] = undefined;//string
     this['title'] = undefined;//string filename
-    // to save
     this['outputformat'] = undefined;//int
     this['outputpath'] = undefined;//int internal
     this['savetype'] = undefined;//int part type
     this['saveindex'] = undefined;//int part index
-    //nullable
     this['codepage'] = undefined;
     this['delimiter'] = undefined;
     this['delimiterChar'] = undefined;
     this['embeddedfonts'] = undefined;//bool
     this['mailmergesend'] = undefined;
     this['thumbnail'] = undefined;
-    //private
     this['status'] = undefined;//int
     this['status_info'] = undefined;//int
     this['savekey'] = undefined;//int document id to save
@@ -130,9 +105,7 @@ function InputCommand(data) {
     this['nobase64'] = true;
     this['forgotten'] = undefined;
     this['isbuilder'] = undefined;
-    this['status_info_in'] = undefined;
-    this['attempt'] = undefined;
-    this['withAuthorization'] = undefined;
+    this['accesstoken'] = undefined;
   }
 }
 InputCommand.prototype = {
@@ -349,23 +322,11 @@ InputCommand.prototype = {
   setIsBuilder: function(data) {
     this['isbuilder'] = data;
   },
-  getStatusInfoIn: function() {
-    return this['status_info_in'];
+  getAccessToken: function() {
+    return this['accesstoken'];
   },
-  setStatusInfoIn: function(data) {
-    this['status_info_in'] = data;
-  },
-  getAttempt: function() {
-    return this['attempt'];
-  },
-  setAttempt: function(data) {
-    this['attempt'] = data;
-  },
-  getWithAuthorization: function() {
-    return this['withAuthorization'];
-  },
-  setWithAuthorization: function(data) {
-    this['withAuthorization'] = data;
+  setAccessToken: function(data){
+    this['accesstoken'] = data;
   }
 };
 
@@ -461,7 +422,7 @@ function CMailMergeSendData(obj) {
     this['url'] = obj['url'];
     this['baseUrl'] = obj['baseUrl'];
     this['jsonkey'] = obj['jsonkey'];
-	this['isJson'] = obj['isJson'];
+    this['isJson'] = obj['isJson'];
   } else {
     this['from'] = null;
     this['to'] = null;
@@ -477,7 +438,7 @@ function CMailMergeSendData(obj) {
     this['url'] = null;
     this['baseUrl'] = null;
     this['jsonkey'] = null;
-	this['isJson'] = null;
+    this['isJson'] = null;
   }
 }
 CMailMergeSendData.prototype.getFrom = function() {
@@ -572,7 +533,7 @@ CMailMergeSendData.prototype.setIsJsonKey = function(v) {
 };
 function TaskQueueData(data) {
   if (data) {
-    this['cmd'] = new InputCommand(data['cmd']);
+    this['cmd'] = new InputCommand(data['cmd'], data.jwtOpen);
     this['toFile'] = data['toFile'];
     this['fromOrigin'] = data['fromOrigin'];
     this['fromSettings'] = data['fromSettings'];
@@ -658,6 +619,7 @@ function OutputSfcData() {
   this['notmodified'] = undefined;
   this['forcesavetype'] = undefined;
   this['encrypted'] = undefined;
+  this['accesstoken'] = undefined;
 }
 OutputSfcData.prototype.getKey = function() {
   return this['key'];
@@ -736,6 +698,12 @@ OutputSfcData.prototype.getEncrypted = function() {
 };
 OutputSfcData.prototype.setEncrypted = function(v) {
   this['encrypted'] = v;
+};
+OutputSfcData.prototype.getAccessToken = function() {
+  return this['accesstoken'];
+};
+OutputSfcData.prototype.setAccessToken = function(v) {
+  this['accesstoken'] = v;
 };
 
 function OutputMailMerge(mailMergeSendData) {
@@ -925,13 +893,9 @@ const c_oAscSecretType = {
   Outbox: 2,
   Session: 3
 };
-const c_oAscQueueType = {
-  rabbitmq: 'rabbitmq',
-  activemq: 'activemq'
-};
 
-const buildVersion = '4.1.2';
-const buildNumber = 37;
+const buildVersion = '5.2.8';
+const buildNumber = 24;
 
 exports.TaskQueueData = TaskQueueData;
 exports.CMailMergeSendData = CMailMergeSendData;
@@ -951,6 +915,5 @@ exports.c_oAscServerCommandErrors = c_oAscServerCommandErrors;
 exports.c_oAscForceSaveTypes = c_oAscForceSaveTypes;
 exports.c_oAscUrlTypes = c_oAscUrlTypes;
 exports.c_oAscSecretType = c_oAscSecretType;
-exports.c_oAscQueueType = c_oAscQueueType;
 exports.buildVersion = buildVersion;
 exports.buildNumber = buildNumber;

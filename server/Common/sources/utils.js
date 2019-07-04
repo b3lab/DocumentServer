@@ -1,34 +1,11 @@
 /*
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System Limited 2010-2018. All rights reserved
  *
- * This program is a free software product. You can redistribute it and/or
- * modify it under the terms of the GNU Affero General Public License (AGPL)
- * version 3 as published by the Free Software Foundation. In accordance with
- * Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
- * that Ascensio System SIA expressly excludes the warranty of non-infringement
- * of any third-party rights.
+ * http://www.teamlab.com
  *
- * This program is distributed WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
- * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
- *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
- * street, Riga, Latvia, EU, LV-1050.
- *
- * The  interactive user interfaces in modified source and object code versions
- * of the Program must display Appropriate Legal Notices, as required under
- * Section 5 of the GNU AGPL version 3.
- *
- * Pursuant to Section 7(b) of the License you must retain the original Product
- * logo when distributing the program. Pursuant to Section 7(e) we decline to
- * grant you any rights under trademark law for use of our trademarks.
- *
- * All the Product's GUI elements, including illustrations and icon sets, as
- * well as technical writing content are licensed under the terms of the
- * Creative Commons Attribution-ShareAlike 4.0 International. See the License
- * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
- *
+ * Version: 5.2.4 (build:94)
  */
+
 
 'use strict';
 
@@ -43,10 +20,10 @@ const escapeStringRegexp = require('escape-string-regexp');
 const ipaddr = require('ipaddr.js');
 var configDnsCache = config.get('dnscache');
 const dnscache = require('dnscache')({
-                                     "enable": configDnsCache.get('enable'),
-                                     "ttl": configDnsCache.get('ttl'),
-                                     "cachesize": configDnsCache.get('cachesize')
-                                   });
+  "enable": configDnsCache.get('enable'),
+  "ttl": configDnsCache.get('ttl'),
+  "cachesize": configDnsCache.get('cachesize')
+});
 const jwt = require('jsonwebtoken');
 const NodeCache = require( "node-cache" );
 const ms = require('ms');
@@ -75,6 +52,8 @@ var ANDROID_SAFE_FILENAME = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 
 var baseRequest = request.defaults(cfgRequestDefaults);
 
+var READ_ONLY_DOCUMENT_TOKEN = "READ_ONLY_DOCUMENT";
+
 var g_oIpFilterRules = function() {
   var res = [];
   for (var i = 0; i < cfgIpFilterRules.length; ++i) {
@@ -96,19 +75,19 @@ exports.getMillisecondsOfHour = function(date) {
   return (date.getUTCMinutes() * 60 +  date.getUTCSeconds()) * 1000 + date.getUTCMilliseconds();
 };
 exports.encodeXml = function(value) {
-	return value.replace(/[<>&'"\r\n\t\xA0]/g, function (c) {
-		switch (c) {
-			case '<': return '&lt;';
-			case '>': return '&gt;';
-			case '&': return '&amp;';
-			case '\'': return '&apos;';
-			case '"': return '&quot;';
-			case '\r': return '&#xD;';
-			case '\n': return '&#xA;';
-			case '\t': return '&#x9;';
-			case '\xA0': return '&#A0;';
-		}
-	});
+  return value.replace(/[<>&'"\r\n\t\xA0]/g, function (c) {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      case '\r': return '&#xD;';
+      case '\n': return '&#xA;';
+      case '\t': return '&#x9;';
+      case '\xA0': return '&#A0;';
+    }
+  });
 };
 function fsStat(fsPath) {
   return new Promise(function(resolve, reject) {
@@ -155,11 +134,10 @@ exports.listFolders = function(fsPath, optNoSubDir) {
     try {
       stats = yield fsStat(fsPath);
     } catch (e) {
-      //exception if fsPath not exist
       stats = null;
     }
     if (stats && stats.isDirectory()) {
-        yield* walkDir(fsPath, list, optNoSubDir, true);
+      yield* walkDir(fsPath, list, optNoSubDir, true);
     }
     return list;
   });
@@ -170,7 +148,6 @@ exports.listObjects = function(fsPath, optNoSubDir) {
     try {
       stats = yield fsStat(fsPath);
     } catch (e) {
-      //exception if fsPath not exist
       stats = null;
     }
     if (stats) {
@@ -209,16 +186,11 @@ function makeAndroidSafeFileName(str) {
 }
 function encodeRFC5987ValueChars(str) {
   return encodeURIComponent(str).
-    // Note that although RFC3986 reserves "!", RFC5987 does not,
-    // so we do not need to escape it
-    replace(/['()]/g, escape). // i.e., %27 %28 %29
-    replace(/\*/g, '%2A').
-    // The following are not required for percent-encoding per RFC5987,
-    //  so we can allow for a little better readability over the wire: |`^
-    replace(/%(?:7C|60|5E)/g, unescape);
+  replace(/['()]/g, escape). // i.e., %27 %28 %29
+  replace(/\*/g, '%2A').
+  replace(/%(?:7C|60|5E)/g, unescape);
 }
 function getContentDisposition (opt_filename, opt_useragent, opt_type) {
-  //from http://stackoverflow.com/questions/93551/how-to-encode-the-filename-parameter-of-content-disposition-header-in-http
   var contentDisposition = opt_type ? opt_type : constants.CONTENT_DISPOSITION_ATTACHMENT;
   if (opt_filename) {
     contentDisposition += '; filename="';
@@ -248,20 +220,11 @@ function getContentDispositionS3 (opt_filename, opt_useragent, opt_type) {
 }
 exports.getContentDisposition = getContentDisposition;
 exports.getContentDispositionS3 = getContentDispositionS3;
-function raiseError(ro, code, msg) {
-  ro.abort();
-  let error = new Error(msg);
-  error.code = code;
-  ro.emit('error', error);
-}
 function downloadUrlPromise(uri, optTimeout, optLimit, opt_Authorization) {
   return new Promise(function (resolve, reject) {
-    //IRI to URI
     uri = URI.serialize(URI.parse(uri));
     var urlParsed = url.parse(uri);
-    //if you expect binary data, you should set encoding: null
-    let connectionAndInactivity = optTimeout && optTimeout.connectionAndInactivity && ms(optTimeout.connectionAndInactivity);
-    var options = {uri: urlParsed, encoding: null, timeout: connectionAndInactivity};
+    var options = {uri: urlParsed, encoding: null, timeout: optTimeout};
     if (opt_Authorization) {
       options.headers = {};
       options.headers[cfgTokenOutboxHeader] = cfgTokenOutboxPrefix + opt_Authorization;
@@ -269,12 +232,13 @@ function downloadUrlPromise(uri, optTimeout, optLimit, opt_Authorization) {
     let sizeLimit = optLimit || Number.MAX_VALUE;
     let bufferLength = 0;
 
-    let executed = false;
-    let ro = baseRequest.get(options, function(err, response, body) {
-      if (executed) {
-        return;
-      }
-      executed = true;
+    function onSizeError(msg){
+      this.abort();
+      let error = new Error(msg);
+      error.code = 'EMSGSIZE';
+      this.emit('error', error);
+    }
+    baseRequest.get(options, function(err, response, body) {
       if (err) {
         reject(err);
       } else {
@@ -291,56 +255,39 @@ function downloadUrlPromise(uri, optTimeout, optLimit, opt_Authorization) {
     }).on('response', function(response) {
       var contentLength = response.headers['content-length'];
       if (contentLength && (contentLength - 0) > sizeLimit) {
-        raiseError(this, 'EMSGSIZE', 'Error response: content-length:' + contentLength);
+        onSizeError.call(this, 'Error response: content-length:' + contentLength);
       }
     }).on('data', function(chunk) {
       bufferLength += chunk.length;
       if (bufferLength > sizeLimit) {
-        raiseError(this, 'EMSGSIZE', 'Error response body.length');
+        onSizeError.call(this, 'Error response body.length');
       }
     });
-    if (optTimeout && optTimeout.wholeCycle) {
-      setTimeout(function() {
-        raiseError(ro, 'ETIMEDOUT', 'Error: whole request cycle timeout');
-      }, ms(optTimeout.wholeCycle));
-    }
   });
 }
 function postRequestPromise(uri, postData, optTimeout, opt_Authorization) {
   return new Promise(function(resolve, reject) {
-    //IRI to URI
     uri = URI.serialize(URI.parse(uri));
     var urlParsed = url.parse(uri);
     var headers = {'Content-Type': 'application/json'};
-    if (opt_Authorization) {
-      headers[cfgTokenOutboxHeader] = cfgTokenOutboxPrefix + opt_Authorization;
-    }
-    let connectionAndInactivity = optTimeout && optTimeout.connectionAndInactivity && ms(optTimeout.connectionAndInactivity);
-    var options = {uri: urlParsed, body: postData, encoding: 'utf8', headers: headers, timeout: connectionAndInactivity};
+    let data = JSON.parse(postData);
 
-    let executed = false;
-    let ro = baseRequest.post(options, function(err, response, body) {
-      if (executed) {
-        return;
-      }
-      executed = true;
+    if (data.accesstoken !== READ_ONLY_DOCUMENT_TOKEN) // to recognize token
+      headers[cfgTokenOutboxHeader] = cfgTokenOutboxPrefix + data.accesstoken;
+
+    var options = {uri: urlParsed, body: postData, encoding: 'utf8', headers: headers, timeout: optTimeout};
+
+    baseRequest.post(options, function(err, response, body) {
       if (err) {
         reject(err);
       } else {
         if (200 == response.statusCode || 204 == response.statusCode) {
           resolve(body);
         } else {
-          let error = new Error('Error response: statusCode:' + response.statusCode + ' ;body:\r\n' + body);
-          error.statusCode = response.statusCode;
-          reject(error);
+          reject(new Error('Error response: statusCode:' + response.statusCode + ' ;body:\r\n' + body));
         }
       }
-    });
-    if (optTimeout && optTimeout.wholeCycle) {
-      setTimeout(function() {
-        raiseError(ro, 'ETIMEDOUT', 'Error whole request cycle timeout');
-      }, ms(optTimeout.wholeCycle));
-    }
+    })
   });
 }
 exports.postRequestPromise = postRequestPromise;
@@ -355,10 +302,6 @@ exports.mapAscServerErrorToOldError = function(error) {
     case constants.TASK_RESULT :
       res = -6;
       break;
-    case constants.CONVERT_PASSWORD :
-    case constants.CONVERT_DRM :
-      res = -5;
-      break;
     case constants.CONVERT_DOWNLOAD :
       res = -4;
       break;
@@ -367,6 +310,8 @@ exports.mapAscServerErrorToOldError = function(error) {
       res = -2;
       break;
     case constants.CONVERT_LIMITS :
+    case constants.CONVERT_PASSWORD :
+    case constants.CONVERT_DRM :
     case constants.CONVERT_NEED_PARAMS :
     case constants.CONVERT_PARAMS :
     case constants.CONVERT_LIBREOFFICE :
@@ -455,14 +400,16 @@ function fillResponse(req, res, uri, error, isJSON) {
   } else {
     output = {fileUrl: uri, percent: (uri ? 100 : 0), endConvert: !!uri};
   }
-  const accepts = isJSON ? ['json', 'xml'] : ['xml', 'json'];
-  switch (req.accepts(accepts)) {
-    case 'json':
-      isJSON = true;
-      break;
-    case 'xml':
-      isJSON = false;
-      break;
+  var accept = req.get('Accept');
+  if (accept) {
+    switch (mime.getExtension(accept)) {
+      case "json":
+        isJSON = true;
+        break;
+      case "xml":
+        isJSON = false;
+        break;
+    }
   }
   _fillResponse(res, output, isJSON);
 }
@@ -633,7 +580,6 @@ function stream2Buffer(stream) {
 }
 exports.stream2Buffer = stream2Buffer;
 function changeOnlyOfficeUrl(inputUrl, strPath, optFilename) {
-  //onlyoffice file server expects url end with file extension
   if (-1 == inputUrl.indexOf('?')) {
     inputUrl += '?';
   } else {
@@ -704,17 +650,17 @@ function* checkHostFilter(hostname) {
 }
 exports.checkHostFilter = checkHostFilter;
 function checkClientIp(req, res, next) {
-	let status = 0;
-	if (cfgIpFilterEseForRequest) {
-		const addresses = forwarded(req);
-		const ipString = addresses[addresses.length - 1];
-		status = checkIpFilter(ipString);
-	}
-	if (status > 0) {
-		res.sendStatus(status);
-	} else {
-		next();
-	}
+  let status = 0;
+  if (cfgIpFilterEseForRequest) {
+    const addresses = forwarded(req);
+    const ipString = addresses[addresses.length - 1];
+    status = checkIpFilter(ipString);
+  }
+  if (status > 0) {
+    res.sendStatus(status);
+  } else {
+    next();
+  }
 }
 exports.checkClientIp = checkClientIp;
 function dnsLookup(hostname, options) {
@@ -753,7 +699,6 @@ function getSecret(docId, secretElem, opt_iss, opt_token) {
   if (!isEmptyObject(secretElem.tenants)) {
     var iss;
     if (opt_token) {
-      //look for issuer
       var decodedTemp = jwt.decode(opt_token);
       if (decodedTemp && decodedTemp.iss) {
         iss = decodedTemp.iss;
@@ -774,9 +719,7 @@ exports.getSecret = getSecret;
 function fillJwtForRequest(opt_payload) {
   let data;
   if (cfgTokenOutboxInBody) {
-    //todo refuse prototypes in opt_payload(they are simple getter/setter).
-    //JSON.parse/stringify is more universal but Object.assign is enough for our inputs
-    data = Object.assign(Object.create(null), opt_payload);
+    data = opt_payload || {};
   } else {
     data = {};
     if(opt_payload){
